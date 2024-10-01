@@ -29,7 +29,7 @@ class RSAKeyGenerator {
     do {
       _p = _generatePrime();
       _q = _generatePrime();
-    } while (_p == _q); // Ensure p and q are distinct
+    } while (_p == _q);
 
     _n = _p * _q;
     _m = (_p - 1) * (_q - 1);

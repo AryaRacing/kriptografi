@@ -20,10 +20,9 @@ class _SuperEncryptionPageState extends State<SuperEncryptionPage> {
   String _finalOutput = '';
   BigInt _publicKey = BigInt.zero;
   BigInt _n = BigInt.zero;
-  BigInt _privateKey = BigInt.zero; // Store private key
+  BigInt _privateKey = BigInt.zero;
   String _rsaKeyDisplay = '';
 
-  // Predefined set of prime numbers for RSA
   final List<BigInt> _primes = [
     BigInt.from(3),
     BigInt.from(5),
@@ -41,29 +40,25 @@ class _SuperEncryptionPageState extends State<SuperEncryptionPage> {
     BigInt.from(47),
   ];
 
-  // Method to select random prime from predefined list
   BigInt _selectRandomPrime() {
     Random random = Random();
     return _primes[random.nextInt(_primes.length)];
   }
 
-  // Method to generate a valid public exponent e
   BigInt _generateDynamicPublicExponent(BigInt phi) {
     List<BigInt> candidates = [BigInt.from(3), BigInt.from(5), BigInt.from(17), BigInt.from(65537)];
     for (BigInt candidate in candidates) {
       if (phi.gcd(candidate) == BigInt.one) {
-        return candidate; // Return the first valid candidate
+        return candidate;
       }
     }
-    return BigInt.from(3); // Default to 3 if no valid candidates found
+    return BigInt.from(3);
   }
 
-  // Method to handle RSA key generation
   void _generateRSAKeys() {
-    BigInt p = _selectRandomPrime(); // Generate random prime
-    BigInt q = _selectRandomPrime(); // Generate another random prime
+    BigInt p = _selectRandomPrime();
+    BigInt q = _selectRandomPrime(); 
 
-    // Ensure p and q are not the same
     while (p == q) {
       q = _selectRandomPrime();
     }
@@ -71,16 +66,14 @@ class _SuperEncryptionPageState extends State<SuperEncryptionPage> {
     _n = p * q;
     BigInt phi = (p - BigInt.one) * (q - BigInt.one);
 
-    // Generate dynamic public exponent
     BigInt e = _generateDynamicPublicExponent(phi);
 
-    _privateKey = e.modInverse(phi); // Calculate private exponent
+    _privateKey = e.modInverse(phi);
     _publicKey = e;
 
-    // Update the displayed RSA keys
     _rsaKeyDisplay = 'Public Key: ($e, $_n)\nPrivate Key: $_privateKey';
 
-    setState(() {}); // Trigger UI update
+    setState(() {});
   }
 
   String _caesarCipher(String plaintext, int shift) {
@@ -108,9 +101,9 @@ class _SuperEncryptionPageState extends State<SuperEncryptionPage> {
   }
 
   String _aesEncrypt(String plaintext, String secretKey, {String? iv}) {
-    final key = encrypt.Key.fromUtf8(secretKey.padRight(32, '0')); // Pad to 32 characters
+    final key = encrypt.Key.fromUtf8(secretKey.padRight(32, '0'));
     final encrypter = encrypt.Encrypter(encrypt.AES(key));
-    final ivValue = iv != null ? encrypt.IV.fromUtf8(iv) : encrypt.IV.fromLength(16); // Default IV if ECB
+    final ivValue = iv != null ? encrypt.IV.fromUtf8(iv) : encrypt.IV.fromLength(16);
 
     final encrypted = encrypter.encrypt(plaintext, iv: ivValue);
     return encrypted.base64;
@@ -118,7 +111,7 @@ class _SuperEncryptionPageState extends State<SuperEncryptionPage> {
 
   String _rsaEncrypt(String plaintext) {
     final encoded = utf8.encode(plaintext);
-    final bigIntPlaintext = BigInt.from(encoded[0]); // Simplified RSA Encryption for demonstration
+    final bigIntPlaintext = BigInt.from(encoded[0]);
     final encrypted = bigIntPlaintext.modPow(_publicKey, _n);
     return encrypted.toString();
   }
@@ -128,9 +121,8 @@ class _SuperEncryptionPageState extends State<SuperEncryptionPage> {
     int caesarShift = int.parse(_caesarShiftController.text);
     String vigenereKey = _vigenereKeyController.text;
     String aesSecretKey = _aesSecretKeyController.text;
-    String? aesIV = _selectedMode == 'CBC' ? _aesIVController.text : null; // Get IV if CBC mode
+    String? aesIV = _selectedMode == 'CBC' ? _aesIVController.text : null;
 
-    // Validate secret key length
     if ((aesSecretKey.length != 16 && _selectedKeySize == '128') ||
         (aesSecretKey.length != 24 && _selectedKeySize == '192') ||
         (aesSecretKey.length != 32 && _selectedKeySize == '256')) {
@@ -150,22 +142,16 @@ class _SuperEncryptionPageState extends State<SuperEncryptionPage> {
       return;
     }
 
-    // Perform Caesar Cipher encryption
     String caesarEncrypted = _caesarCipher(caesarPlaintext, caesarShift);
     
-    // Perform Vigenère Cipher encryption
     String vigenereEncrypted = _vigenereCipher(caesarEncrypted, vigenereKey);
     
-    // Perform AES encryption
     String aesEncrypted = _aesEncrypt(vigenereEncrypted, aesSecretKey, iv: aesIV);
     
-    // Perform RSA encryption on the AES result
     String rsaEncrypted = _rsaEncrypt(aesEncrypted);
     
-    // Combine results
     _finalOutput = 'Caesar: $caesarEncrypted\nVigenère: $vigenereEncrypted\nAES: $aesEncrypted\nRSA: $rsaEncrypted';
     
-    // Display the final output
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -223,7 +209,7 @@ Widget _buildTextField(TextEditingController controller, String label, {TextInpu
                 _buildTextFieldWithCount(_aesSecretKeyController, 'Secret Key', obscureText: false), // Changed obscureText to false
                 if (_selectedMode == 'CBC') _buildTextFieldWithCount(_aesIVController, 'IV', obscureText: true),
               ]),
-              _buildRSAInputCard(), // Updated RSA card
+              _buildRSAInputCard(),
               ElevatedButton(
                 onPressed: _superEncrypt,
                 child: Text('Super Encrypt'),

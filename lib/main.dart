@@ -3,7 +3,7 @@ import 'package:cryptolicious/rsa_page.dart';
 import 'package:cryptolicious/vigenere_cipher.dart';
 import 'package:flutter/material.dart';
 import 'caesar_cipher.dart';
-import 'super_encryption.dart'; // Import the SuperEncryptionPage
+import 'super_encryption.dart';
 
 void main() {
   runApp(MyApp());
@@ -104,7 +104,6 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
               ),
-              // New Super Encryption Card
               CryptoCard(
                 icon: Icons.enhanced_encryption,
                 title: 'Super Encryption',
@@ -112,7 +111,7 @@ class HomeScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => SuperEncryptionPage(), // Corrected this line
+                      builder: (context) => SuperEncryptionPage(),
                     ),
                   );
                 },

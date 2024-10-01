@@ -6,13 +6,13 @@ class CaesarCipherScreen extends StatefulWidget {
 }
 
 class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
-  String _inputText = ''; // Input teks asli atau terenkripsi
-  int? _shiftValue; // Nilai pergeseran (shift)
-  String _encryptedText = ''; // Variable hasil enkripsi
-  String _decryptedText = ''; // Variable hasil dekripsi
-  String _bruteForceResults = ''; // Variable hasil brute force
-  String _shiftValueError = ''; // Variabel untuk menyimpan pesan kesalahan
-  TextEditingController _decryptionController = TextEditingController(); // Controller untuk input dekripsi
+  String _inputText = ''; 
+  int? _shiftValue; 
+  String _encryptedText = ''; 
+  String _decryptedText = ''; 
+  String _bruteForceResults = ''; 
+  String _shiftValueError = '';
+  TextEditingController _decryptionController = TextEditingController();
 
   void _showErrorDialog(String message) {
     showDialog(
@@ -34,74 +34,68 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
     );
   }
 
-  // Tambahkan metode untuk memeriksa input alfanumerik
   bool _isAlphanumeric(String text) {
-    return RegExp(r'^[a-zA-Z0-9\s]+$').hasMatch(text); // Memeriksa apakah hanya huruf dan angka, termasuk spasi
+    return RegExp(r'^[a-zA-Z0-9\s]+$').hasMatch(text);
   }
 
   void _encryptText() {
     if (_inputText.isEmpty) {
       _showErrorDialog('Input text tidak boleh kosong');
-      return; // Hentikan eksekusi fungsi jika input kosong
+      return;
     }
 
-    // Validasi apakah input hanya berisi huruf dan angka
     if (!_isAlphanumeric(_inputText)) {
       _showErrorDialog('Input text hanya boleh berisi huruf dan angka (alphanumeric)');
-      return; // Hentikan eksekusi fungsi jika input tidak valid
+      return;
     }
 
     if (_shiftValue == null) {
       _showErrorDialog('Kunci harus diisi');
-      return; // Hentikan eksekusi fungsi jika kunci tidak diisi
+      return; 
     } else if (_shiftValueError.isNotEmpty) {
-      _showErrorDialog(_shiftValueError); // Show error if shift value is invalid
-      return; // Hentikan eksekusi fungsi jika ada kesalahan pada shift value
+      _showErrorDialog(_shiftValueError); 
+      return; 
     }
 
     setState(() {
       _encryptedText = _caesarCipher(_inputText, _shiftValue!);
-      _decryptionController.text = _encryptedText; // Set input text for decryption card to encrypted text
-      _bruteForceResults = ''; // Reset brute force results after encryption
-      _shiftValueError = ''; // Clear error message after encryption
+      _decryptionController.text = _encryptedText;
+      _bruteForceResults = ''; 
+      _shiftValueError = ''; 
     });
   }
 
   void _decryptText() {
-    // Cek apakah nilai shift kosong
     if (_shiftValue == null) {
       _showErrorDialog('Kunci tidak boleh kosong');
-      return; // Hentikan eksekusi fungsi jika shift kosong
+      return;
     }
 
-    // Cek apakah input text kosong
     if (_decryptionController.text.isEmpty) {
       _showErrorDialog('Input text tidak boleh kosong');
-      return; // Hentikan eksekusi fungsi jika input kosong
+      return; 
     }
 
-    // Validasi apakah input hanya berisi huruf dan angka
     if (!_isAlphanumeric(_decryptionController.text)) {
       _showErrorDialog('Input text hanya boleh berisi huruf dan angka (alphanumeric)');
-      return; // Hentikan eksekusi fungsi jika input tidak valid
+      return;
     }
 
     setState(() {
-      _decryptedText = _caesarCipher(_decryptionController.text, -(_shiftValue!)); // Menggunakan shift yang ada
-      _encryptedText = ''; // Reset encrypted text after decryption
-      _bruteForceResults = ''; // Reset brute force results after decryption
+      _decryptedText = _caesarCipher(_decryptionController.text, -(_shiftValue!));
+      _encryptedText = '';
+      _bruteForceResults = '';
     });
   }
 
   void _bruteForce() {
-    // Gunakan input dari kartu dekripsi untuk brute force
     if (_decryptionController.text.isEmpty) {
       _showErrorDialog('Teks untuk brute force harus ada');
       return;
     }
 
     setState(() {
-      _bruteForceResults = ''; // Kosongkan sebelum brute force
+      _bruteForceResults = '';
       List<String> results = [];
       for (int i = 0; i < 26; i++) {
         results.add('Shift $i: ${_caesarCipher(_decryptionController.text, -i)}');
@@ -115,17 +109,14 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
       text.runes.map((int rune) {
         var char = String.fromCharCode(rune);
 
-        // Cek apakah karakter adalah huruf
         if (char.contains(RegExp(r'[A-Za-z]'))) {
           var base = char.toLowerCase() == char ? 'a'.codeUnitAt(0) : 'A'.codeUnitAt(0);
           return (rune - base + shift) % 26 + base;
         }
-        // Cek apakah karakter adalah angka
         else if (char.contains(RegExp(r'[0-9]'))) {
           var base = '0'.codeUnitAt(0);
           return (rune - base + shift) % 10 + base;
         }
-        // Jika bukan huruf atau angka, kembalikan karakter asli (termasuk spasi)
         return rune;
       }),
     );
@@ -133,7 +124,7 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
 
   @override
   void dispose() {
-    _decryptionController.dispose(); // Hapus controller saat widget dihapus
+    _decryptionController.dispose();
     super.dispose();
   }
 
@@ -152,8 +143,8 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
           ),
           child: AppBar(
             title: Text('Caesar Cipher', style: TextStyle(color: Colors.white)),
-            backgroundColor: Colors.transparent, // Make background transparent
-            elevation: 0, // Remove shadow
+            backgroundColor: Colors.transparent,
+            elevation: 0, 
           ),
         ),
       ),
@@ -167,13 +158,12 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
         ),
         child: Column(
           children: <Widget>[
-            Expanded( // Tambahkan Expanded disini untuk menghindari background putih
+            Expanded(
               child: SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: <Widget>[
-                      // Encryption Section
                       Card(
                         elevation: 4,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -197,21 +187,20 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
                                 keyboardType: TextInputType.number,
                                 onChanged: (value) {
                                   if (value.isEmpty) {
-                                    _shiftValue = null; // Set to null if input is empty
-                                    _shiftValueError = ''; // Clear error message
+                                    _shiftValue = null; 
+                                    _shiftValueError = ''; 
                                   } else {
                                     if (RegExp(r'^[0-9]+$').hasMatch(value)) {
-                                      _shiftValue = int.tryParse(value); // Try to parse the input to an integer
-                                      _shiftValueError = ''; // Clear error message if valid number
+                                      _shiftValue = int.tryParse(value); 
+                                      _shiftValueError = ''; 
                                     } else {
-                                      _shiftValueError = 'Kunci harus berupa angka'; // Set error message
-                                      _shiftValue = null; // Ensure shiftValue is null for invalid input
+                                      _shiftValueError = 'Kunci harus berupa angka'; 
+                                      _shiftValue = null; 
                                     }
                                   }
-                                  setState(() {}); // Update the state to reflect changes
+                                  setState(() {}); 
                                 },
                               ),
-                              // Display the error message below the Shift Value input
                               if (_shiftValueError.isNotEmpty)
                                 Text(
                                   _shiftValueError,
@@ -225,9 +214,9 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
                                     title: 'Encrypt',
                                     onPressed: () {
                                       if (_shiftValueError.isNotEmpty) {
-                                        _showErrorDialog(_shiftValueError); // Show error if shift value is invalid
+                                        _showErrorDialog(_shiftValueError);
                                       } else {
-                                        _encryptText(); // Proceed with encryption
+                                        _encryptText();
                                       }
                                     },
                                   ),
@@ -240,7 +229,6 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
                           ),
                         ),
                       ),
-                      // Decryption Section
                       Card(
                         elevation: 4,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -255,33 +243,29 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
                                 controller: _decryptionController,
                                 decoration: InputDecoration(labelText: 'Input Encrypted Text'),
                                 onChanged: (value) {
-                                  // Hapus setState disini untuk menghindari update yang tidak perlu
                                 },
                               ),
-                              // Button for decryption
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: <Widget>[
                                   CryptoActionCard(
                                     title: 'Decrypt',
                                     onPressed: () {
-                                      _decryptText(); // Call decrypt function
+                                      _decryptText();
                                     },
                                   ),
                                   CryptoActionCard(
                                     title: 'Brute Force',
-                                    onPressed: _bruteForce, // Call brute force function
+                                    onPressed: _bruteForce, 
                                   ),
                                 ],
                               ),
                               SizedBox(height: 20),
-                              // Display hasil dekripsi
                               Text('Decrypted Text: $_decryptedText', style: TextStyle(fontSize: 16)),
                             ],
                           ),
                         ),
                       ),
-                      // Brute Force Results Section
                       Card(
                         elevation: 4,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),

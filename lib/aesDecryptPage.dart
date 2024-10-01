@@ -12,9 +12,9 @@ class _AESDecryptPageState extends State<AESDecryptPage> {
   final _keyController = TextEditingController(text: "aesEncryptionKey");
   final _ivController = TextEditingController(text: "encryptionIntVec");
   String? _decryptedText;
-  String _mode = 'CBC'; // CBC or ECB mode
-  int _keySize = 128; // Key size can be 128, 192, 256
-  String _outputFormat = 'Base64'; // Base64 or Hex
+  String _mode = 'CBC';
+  int _keySize = 128; 
+  String _outputFormat = 'Base64';
 
   Uint8List _hexToBytes(String hex) {
     hex = hex.replaceAll(' ', '');
@@ -29,13 +29,13 @@ class _AESDecryptPageState extends State<AESDecryptPage> {
   int _getExpectedLength(int keySize) {
     switch (keySize) {
       case 128:
-        return 16; // 16 characters for 128 bits
+        return 16;
       case 192:
-        return 24; // 24 characters for 192 bits
+        return 24;
       case 256:
-        return 32; // 32 characters for 256 bits
+        return 32; 
       default:
-        return 16; // Default to 16 characters
+        return 16; 
     }
   }
 
@@ -45,14 +45,12 @@ class _AESDecryptPageState extends State<AESDecryptPage> {
       return;
     }
 
-    // Secret key length check
     int expectedKeyLength = _keySize ~/ 8;
     if (_keyController.text.length != expectedKeyLength) {
       _showErrorDialog('Secret key must be exactly $expectedKeyLength characters long.');
       return;
     }
 
-    // IV length check (for CBC mode)
     if (_mode == 'CBC' && _ivController.text.length != 16) {
       _showErrorDialog('IV (Initialization Vector) must be exactly 16 characters long.');
       return;
@@ -77,7 +75,6 @@ class _AESDecryptPageState extends State<AESDecryptPage> {
     }
   }
 
-  // Method to show error dialog
   void _showErrorDialog(String message) {
     showDialog(
       context: context,

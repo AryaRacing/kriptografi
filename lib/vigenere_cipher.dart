@@ -8,9 +8,8 @@ class VigenereCipherScreen extends StatefulWidget {
 class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
   String _inputText = '';
   String _key = '';
-  String _encryptedText = ''; // Separate variable for encrypted text
-  String _decryptedText = ''; // Separate variable for decrypted text
-
+  String _encryptedText = '';
+  String _decryptedText = '';
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
@@ -42,13 +41,11 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
       return;
     }
 
-    // Check if the input text contains non-alphabetic characters (excluding spaces)
     if (_inputText.contains(RegExp(r'[^A-Za-z\s]'))) {
       _showErrorDialog('Input text tidak boleh mengandung angka atau karakter non-alfabet');
       return;
     }
 
-    // Check if the key contains non-alphabetic characters
     if (!_key.contains(RegExp(r'^[A-Za-z\s]+$'))) {
       _showErrorDialog('Kunci harus berupa huruf alfabet saja');
       return;
@@ -70,13 +67,11 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
       return;
     }
 
-    // Check if the input text contains non-alphabetic characters (excluding spaces)
     if (_inputText.contains(RegExp(r'[^A-Za-z\s]'))) {
       _showErrorDialog('Input text tidak boleh mengandung angka atau karakter non-alfabet');
       return;
     }
 
-    // Check if the key contains non-alphabetic characters
     if (!_key.contains(RegExp(r'^[A-Za-z\s]+$'))) {
       _showErrorDialog('Kunci harus berupa huruf alfabet saja');
       return;
@@ -107,7 +102,7 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
 
         keyIndex++;
       } else {
-        result += char; // Non-alphabetical characters (including spaces) remain the same
+        result += char;
       }
     }
 
@@ -143,13 +138,12 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
           ),
         ),
         child: Container(
-          height: double.infinity, // Ensure the container fills the height
+          height: double.infinity,
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 children: <Widget>[
-                  // Encryption Section
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -177,13 +171,11 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
                             },
                           ),
                           SizedBox(height: 20),
-                          // Replace button with CryptoActionCard
                           CryptoActionCard(
                             title: 'Encrypt',
                             onPressed: _encryptText,
                           ),
                           SizedBox(height: 20),
-                          // Display encrypted text inside the encryption card
                           Text(
                             _encryptedText,
                             style: TextStyle(fontSize: 16, color: Colors.black),
@@ -192,7 +184,6 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
                       ),
                     ),
                   ),
-                  // Decryption Section
                   Card(
                     elevation: 4,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -220,13 +211,11 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
                             },
                           ),
                           SizedBox(height: 20),
-                          // Replace button with CryptoActionCard
                           CryptoActionCard(
                             title: 'Decrypt',
                             onPressed: _decryptText,
                           ),
                           SizedBox(height: 20),
-                          // Display decrypted text inside the decryption card
                           Text(
                             _decryptedText,
                             style: TextStyle(fontSize: 16, color: Colors.black),
