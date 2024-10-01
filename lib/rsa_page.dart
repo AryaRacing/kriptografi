@@ -101,8 +101,10 @@ class _RSAPageState extends State<RSAPage> {
 
   void _decryptText() {
     setState(() {
-      List<int> encryptedChars = _ciphertext.split(', ').map((e) => int.parse(e)).toList();
-      _decryptedText = _decrypt(encryptedChars);
+      if (_ciphertext.isNotEmpty) {
+        List<int> encryptedChars = _ciphertext.split(', ').map((e) => int.parse(e)).toList();
+        _decryptedText = _decrypt(encryptedChars);
+      }
     });
   }
 
@@ -153,7 +155,13 @@ class _RSAPageState extends State<RSAPage> {
               ),
               SizedBox(height: 20),
               ElevatedButton.icon(
-                onPressed: _generateKeys,
+                onPressed: () {
+                  _generateKeys();
+                  setState(() {
+                    _ciphertext = ''; // Clear ciphertext when regenerating keys
+                    _decryptedText = ''; // Clear decrypted text when regenerating keys
+                  });
+                },
                 icon: Icon(Icons.vpn_key),
                 label: Text('Regenerate Key'),
                 style: ElevatedButton.styleFrom(

@@ -26,8 +26,11 @@ class RSAKeyGenerator {
 
   // Fungsi untuk menghasilkan kunci RSA
   void generateKeys() {
-    _p = _generatePrime();
-    _q = _generatePrime();
+    do {
+      _p = _generatePrime();
+      _q = _generatePrime();
+    } while (_p == _q); // Ensure p and q are distinct
+
     _n = _p * _q;
     _m = (_p - 1) * (_q - 1);
 

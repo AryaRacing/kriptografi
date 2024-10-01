@@ -42,8 +42,14 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
       return;
     }
 
-  // Check if the key contains non-alphabetic characters
-    if (!_key.contains(RegExp(r'^[A-Za-z]+$'))) {
+    // Check if the input text contains non-alphabetic characters (excluding spaces)
+    if (_inputText.contains(RegExp(r'[^A-Za-z\s]'))) {
+      _showErrorDialog('Input text tidak boleh mengandung angka atau karakter non-alfabet');
+      return;
+    }
+
+    // Check if the key contains non-alphabetic characters
+    if (!_key.contains(RegExp(r'^[A-Za-z\s]+$'))) {
       _showErrorDialog('Kunci harus berupa huruf alfabet saja');
       return;
     }
@@ -64,8 +70,14 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
       return;
     }
 
-  // Check if the key contains non-alphabetic characters
-    if (!_key.contains(RegExp(r'^[A-Za-z]+$'))) {
+    // Check if the input text contains non-alphabetic characters (excluding spaces)
+    if (_inputText.contains(RegExp(r'[^A-Za-z\s]'))) {
+      _showErrorDialog('Input text tidak boleh mengandung angka atau karakter non-alfabet');
+      return;
+    }
+
+    // Check if the key contains non-alphabetic characters
+    if (!_key.contains(RegExp(r'^[A-Za-z\s]+$'))) {
       _showErrorDialog('Kunci harus berupa huruf alfabet saja');
       return;
     }
@@ -95,7 +107,7 @@ class _VigenereCipherScreenState extends State<VigenereCipherScreen> {
 
         keyIndex++;
       } else {
-        result += char; // Non-alphabetical characters remain the same
+        result += char; // Non-alphabetical characters (including spaces) remain the same
       }
     }
 

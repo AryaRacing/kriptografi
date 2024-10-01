@@ -12,6 +12,7 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
   String _decryptedText = ''; // Variable hasil dekripsi
   String _bruteForceResults = ''; // Variable hasil brute force
   String _shiftValueError = ''; // Variabel untuk menyimpan pesan kesalahan
+  TextEditingController _decryptionController = TextEditingController(); // Controller untuk input dekripsi
 
   void _showErrorDialog(String message) {
     showDialog(
@@ -33,53 +34,79 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
     );
   }
 
+  // Tambahkan metode untuk memeriksa input alfanumerik
+  bool _isAlphanumeric(String text) {
+    return RegExp(r'^[a-zA-Z0-9\s]+$').hasMatch(text); // Memeriksa apakah hanya huruf dan angka, termasuk spasi
+  }
+
   void _encryptText() {
     if (_inputText.isEmpty) {
       _showErrorDialog('Input text tidak boleh kosong');
-      return;
+      return; // Hentikan eksekusi fungsi jika input kosong
+    }
+
+    // Validasi apakah input hanya berisi huruf dan angka
+    if (!_isAlphanumeric(_inputText)) {
+      _showErrorDialog('Input text hanya boleh berisi huruf dan angka (alphanumeric)');
+      return; // Hentikan eksekusi fungsi jika input tidak valid
     }
 
     if (_shiftValue == null) {
       _showErrorDialog('Kunci harus diisi');
-      return;
+      return; // Hentikan eksekusi fungsi jika kunci tidak diisi
     } else if (_shiftValueError.isNotEmpty) {
       _showErrorDialog(_shiftValueError); // Show error if shift value is invalid
-      return;
+      return; // Hentikan eksekusi fungsi jika ada kesalahan pada shift value
     }
 
     setState(() {
       _encryptedText = _caesarCipher(_inputText, _shiftValue!);
+      _decryptionController.text = _encryptedText; // Set input text for decryption card to encrypted text
+      _bruteForceResults = ''; // Reset brute force results after encryption
       _shiftValueError = ''; // Clear error message after encryption
     });
   }
 
   void _decryptText() {
-    if (_inputText.isEmpty) {
-      _showErrorDialog('Input text tidak boleh kosong');
-      return;
+    // Cek apakah nilai shift kosong
+    if (_shiftValue == null) {
+      _showErrorDialog('Kunci tidak boleh kosong');
+      return; // Hentikan eksekusi fungsi jika shift kosong
     }
 
-    if (_shiftValue == null) {
-      _showErrorDialog('Kunci harus diisi');
-      return;
-    } else if (_shiftValueError.isNotEmpty) {
-      _showErrorDialog(_shiftValueError); // Show error if shift value is invalid
-      return;
+    // Cek apakah input text kosong
+    if (_decryptionController.text.isEmpty) {
+      _showErrorDialog('Input text tidak boleh kosong');
+      return; // Hentikan eksekusi fungsi jika input kosong
+    }
+
+    // Validasi apakah input hanya berisi huruf dan angka
+    if (!_isAlphanumeric(_decryptionController.text)) {
+      _showErrorDialog('Input text hanya boleh berisi huruf dan angka (alphanumeric)');
+      return; // Hentikan eksekusi fungsi jika input tidak valid
     }
 
     setState(() {
-      _decryptedText = _caesarCipher(_inputText, -_shiftValue!);
+      _decryptedText = _caesarCipher(_decryptionController.text, -(_shiftValue!)); // Menggunakan shift yang ada
+      _encryptedText = ''; // Reset encrypted text after decryption
+      _bruteForceResults = ''; // Reset brute force results after decryption
     });
   }
 
   void _bruteForce() {
+    // Gunakan input dari kartu dekripsi untuk brute force
+    if (_decryptionController.text.isEmpty) {
+      _showErrorDialog('Teks untuk brute force harus ada');
+      return;
+    }
+
     setState(() {
       _bruteForceResults = ''; // Kosongkan sebelum brute force
       List<String> results = [];
       for (int i = 0; i < 26; i++) {
-        results.add('Shift $i: ${_caesarCipher(_encryptedText, -i)}');
+        results.add('Shift $i: ${_caesarCipher(_decryptionController.text, -i)}');
       }
-      _bruteForceResults = results.join('\n');
+      _bruteForceResults = results.join('\n\n');
     });
   }
 
@@ -87,13 +114,27 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
     return String.fromCharCodes(
       text.runes.map((int rune) {
         var char = String.fromCharCode(rune);
+
+        // Cek apakah karakter adalah huruf
         if (char.contains(RegExp(r'[A-Za-z]'))) {
           var base = char.toLowerCase() == char ? 'a'.codeUnitAt(0) : 'A'.codeUnitAt(0);
           return (rune - base + shift) % 26 + base;
         }
+        // Cek apakah karakter adalah angka
+        else if (char.contains(RegExp(r'[0-9]'))) {
+          var base = '0'.codeUnitAt(0);
+          return (rune - base + shift) % 10 + base;
+        }
+        // Jika bukan huruf atau angka, kembalikan karakter asli (termasuk spasi)
         return rune;
       }),
     );
+  }
+
+  @override
+  void dispose() {
+    _decryptionController.dispose(); // Hapus controller saat widget dihapus
+    super.dispose();
   }
 
   @override
@@ -194,11 +235,7 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
                               ),
                               SizedBox(height: 20),
                               // Display hasil enkripsi
-                              if (_encryptedText.isNotEmpty)
-                                Text(
-                                  'Encrypted Text: $_encryptedText',
-                                  style: TextStyle(fontSize: 16, color: Colors.black),
-                                ),
+                              Text('Encrypted Text: $_encryptedText', style: TextStyle(fontSize: 16)),
                             ],
                           ),
                         ),
@@ -215,35 +252,36 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
                             children: [
                               Text('Decrypt Text', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                               TextField(
+                                controller: _decryptionController,
                                 decoration: InputDecoration(labelText: 'Input Encrypted Text'),
                                 onChanged: (value) {
-                                  setState(() {
-                                    _inputText = value;
-                                  });
+                                  // Hapus setState disini untuk menghindari update yang tidak perlu
                                 },
                               ),
-                              SizedBox(height: 20),
+                              // Button for decryption
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: <Widget>[
                                   CryptoActionCard(
                                     title: 'Decrypt',
-                                    onPressed: _decryptText,
+                                    onPressed: () {
+                                      _decryptText(); // Call decrypt function
+                                    },
+                                  ),
+                                  CryptoActionCard(
+                                    title: 'Brute Force',
+                                    onPressed: _bruteForce, // Call brute force function
                                   ),
                                 ],
                               ),
                               SizedBox(height: 20),
                               // Display hasil dekripsi
-                              if (_decryptedText.isNotEmpty)
-                                Text(
-                                  'Decrypted Text: $_decryptedText',
-                                  style: TextStyle(fontSize: 16, color: Colors.black),
-                                ),
+                              Text('Decrypted Text: $_decryptedText', style: TextStyle(fontSize: 16)),
                             ],
                           ),
                         ),
                       ),
-                      // Brute Force Card
+                      // Brute Force Results Section
                       Card(
                         elevation: 4,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -253,42 +291,13 @@ class _CaesarCipherScreenState extends State<CaesarCipherScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Brute Force', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                              SizedBox(height: 20),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: <Widget>[
-                                  CryptoActionCard(
-                                    title: 'Brute Force',
-                                    onPressed: _bruteForce,
-                                  ),
-                                ],
-                              ),
+                              Text('Brute Force Results', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                              SizedBox(height: 10),
+                              Text(_bruteForceResults, style: TextStyle(fontSize: 16)),
                             ],
                           ),
                         ),
                       ),
-                      // Tabel Hasil Brute Force
-                      if (_bruteForceResults.isNotEmpty)
-                        Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                          margin: EdgeInsets.symmetric(vertical: 10),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Brute Force Results:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                SizedBox(height: 10),
-                                Text(
-                                  _bruteForceResults,
-                                  style: TextStyle(fontSize: 16, color: Colors.black),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                     ],
                   ),
                 ),
@@ -311,16 +320,10 @@ class CryptoActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return ElevatedButton(
       onPressed: onPressed,
-      child: Text(
-        title,
-        style: TextStyle(
-          color: Colors.white, // Ubah warna teks menjadi putih
-        ),
-      ),
+      child: Text(title),
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.green,
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        backgroundColor: Colors.greenAccent
       ),
     );
   }

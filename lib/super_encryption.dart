@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:convert'; // Required for base64 encoding
+import 'dart:convert';
+import 'package:encrypt/encrypt.dart' as encrypt;
+import 'dart:math';
 
 class SuperEncryptionPage extends StatefulWidget {
   @override
@@ -7,293 +9,326 @@ class SuperEncryptionPage extends StatefulWidget {
 }
 
 class _SuperEncryptionPageState extends State<SuperEncryptionPage> {
-  // Controllers for inputs
-  TextEditingController _caesarPlaintextController = TextEditingController();
-  TextEditingController _caesarShiftController = TextEditingController();
-  TextEditingController _vigenereKeyController = TextEditingController();
-  TextEditingController _aesSecretKeyController = TextEditingController();
-  TextEditingController _aesIvController = TextEditingController();
+  final TextEditingController _caesarPlaintextController = TextEditingController();
+  final TextEditingController _caesarShiftController = TextEditingController();
+  final TextEditingController _vigenereKeyController = TextEditingController();
+  final TextEditingController _aesSecretKeyController = TextEditingController();
+  final TextEditingController _aesIVController = TextEditingController();
 
-  String _selectedMode = 'CBC'; // Default mode CBC
-  String _selectedKeySize = '128'; // Default key size
-  String _superEncryptedData = '';
-  String _decryptedData = '';
+  String _selectedKeySize = '128';
+  String _selectedMode = 'CBC';
+  String _finalOutput = '';
+  BigInt _publicKey = BigInt.zero;
+  BigInt _n = BigInt.zero;
+  BigInt _privateKey = BigInt.zero; // Store private key
+  String _rsaKeyDisplay = '';
 
-  // Caesar Cipher Methods
-  String _caesarEncrypt(String plaintext, int shift) {
-    return String.fromCharCodes(
-      plaintext.runes.map((char) {
-        return char + shift;
-      }),
-    );
+  // Predefined set of prime numbers for RSA
+  final List<BigInt> _primes = [
+    BigInt.from(3),
+    BigInt.from(5),
+    BigInt.from(7),
+    BigInt.from(11),
+    BigInt.from(13),
+    BigInt.from(17),
+    BigInt.from(19),
+    BigInt.from(23),
+    BigInt.from(29),
+    BigInt.from(31),
+    BigInt.from(37),
+    BigInt.from(41),
+    BigInt.from(43),
+    BigInt.from(47),
+  ];
+
+  // Method to select random prime from predefined list
+  BigInt _selectRandomPrime() {
+    Random random = Random();
+    return _primes[random.nextInt(_primes.length)];
   }
 
-  String _caesarDecrypt(String ciphertext, int shift) {
-    return String.fromCharCodes(
-      ciphertext.runes.map((char) {
-        return char - shift;
-      }),
-    );
+  // Method to generate a valid public exponent e
+  BigInt _generateDynamicPublicExponent(BigInt phi) {
+    List<BigInt> candidates = [BigInt.from(3), BigInt.from(5), BigInt.from(17), BigInt.from(65537)];
+    for (BigInt candidate in candidates) {
+      if (phi.gcd(candidate) == BigInt.one) {
+        return candidate; // Return the first valid candidate
+      }
+    }
+    return BigInt.from(3); // Default to 3 if no valid candidates found
   }
 
-  // Vigenère Cipher Methods
-  String _vigenereEncrypt(String plaintext, String key) {
+  // Method to handle RSA key generation
+  void _generateRSAKeys() {
+    BigInt p = _selectRandomPrime(); // Generate random prime
+    BigInt q = _selectRandomPrime(); // Generate another random prime
+
+    // Ensure p and q are not the same
+    while (p == q) {
+      q = _selectRandomPrime();
+    }
+
+    _n = p * q;
+    BigInt phi = (p - BigInt.one) * (q - BigInt.one);
+
+    // Generate dynamic public exponent
+    BigInt e = _generateDynamicPublicExponent(phi);
+
+    _privateKey = e.modInverse(phi); // Calculate private exponent
+    _publicKey = e;
+
+    // Update the displayed RSA keys
+    _rsaKeyDisplay = 'Public Key: ($e, $_n)\nPrivate Key: $_privateKey';
+
+    setState(() {}); // Trigger UI update
+  }
+
+  String _caesarCipher(String plaintext, int shift) {
+    return plaintext.split('').map((char) {
+      if (!RegExp(r'[a-zA-Z]').hasMatch(char)) return char;
+      int base = char.codeUnitAt(0) < 97 ? 65 : 97;
+      return String.fromCharCode((char.codeUnitAt(0) - base + shift) % 26 + base);
+    }).join('');
+  }
+
+  String _vigenereCipher(String plaintext, String key) {
     String result = '';
     for (int i = 0, j = 0; i < plaintext.length; i++) {
-      var char = plaintext.codeUnitAt(i);
-      var keyChar = key.codeUnitAt(j % key.length);
-      result += String.fromCharCode((char + keyChar) % 256);
-      j++;
+      var char = plaintext[i];
+      if (RegExp(r'[a-zA-Z]').hasMatch(char)) {
+        int base = char.codeUnitAt(0) < 97 ? 65 : 97;
+        int shift = key[j % key.length].toUpperCase().codeUnitAt(0) - 65;
+        result += String.fromCharCode((char.codeUnitAt(0) - base + shift) % 26 + base);
+        j++;
+      } else {
+        result += char;
+      }
     }
     return result;
   }
 
-  String _vigenereDecrypt(String ciphertext, String key) {
-    String result = '';
-    for (int i = 0, j = 0; i < ciphertext.length; i++) {
-      var char = ciphertext.codeUnitAt(i);
-      var keyChar = key.codeUnitAt(j % key.length);
-      result += String.fromCharCode(
-          (char - keyChar + 256) % 256); // Ensure positive result
-      j++;
-    }
-    return result;
+  String _aesEncrypt(String plaintext, String secretKey, {String? iv}) {
+    final key = encrypt.Key.fromUtf8(secretKey.padRight(32, '0')); // Pad to 32 characters
+    final encrypter = encrypt.Encrypter(encrypt.AES(key));
+    final ivValue = iv != null ? encrypt.IV.fromUtf8(iv) : encrypt.IV.fromLength(16); // Default IV if ECB
+
+    final encrypted = encrypter.encrypt(plaintext, iv: ivValue);
+    return encrypted.base64;
   }
 
-  String _aesEncrypt(String plaintext, String secretKey, String iv) {
-    // Add your AES encryption logic here (this is just a placeholder)
-    return base64.encode(utf8.encode(plaintext)); // Placeholder encoding
+  String _rsaEncrypt(String plaintext) {
+    final encoded = utf8.encode(plaintext);
+    final bigIntPlaintext = BigInt.from(encoded[0]); // Simplified RSA Encryption for demonstration
+    final encrypted = bigIntPlaintext.modPow(_publicKey, _n);
+    return encrypted.toString();
   }
 
-  String _aesDecrypt(String ciphertext) {
-    // Add your AES decryption logic here (this is just a placeholder)
-    return utf8.decode(base64.decode(ciphertext)); // Placeholder decoding
-  }
+  void _superEncrypt() {
+    String caesarPlaintext = _caesarPlaintextController.text;
+    int caesarShift = int.parse(_caesarShiftController.text);
+    String vigenereKey = _vigenereKeyController.text;
+    String aesSecretKey = _aesSecretKeyController.text;
+    String? aesIV = _selectedMode == 'CBC' ? _aesIVController.text : null; // Get IV if CBC mode
 
-  String _superEncrypt() {
-    // Get user inputs
-    String caesarText = _caesarEncrypt(_caesarPlaintextController.text,
-        int.parse(_caesarShiftController.text));
-    String vigenereText =
-        _vigenereEncrypt(caesarText, _vigenereKeyController.text);
-    String aesText = _aesEncrypt(
-        vigenereText, _aesSecretKeyController.text, _aesIvController.text);
-
-    // Store the final result
-    _superEncryptedData = aesText; // Store AES output for later decryption
-    return aesText;
-  }
-
-  String _superDecrypt() {
-    String aesText = _superEncryptedData; // Get encrypted data
-    String decryptedAesText = _aesDecrypt(aesText);
-    String vigenereText =
-        _vigenereDecrypt(decryptedAesText, _vigenereKeyController.text);
-    String caesarText =
-        _caesarDecrypt(vigenereText, int.parse(_caesarShiftController.text));
-
-    return caesarText; // Return final decrypted plaintext
-  }
-
-  // Method to validate key size for AES
-  bool _validateKeySize(String secretKey) {
-    int requiredLength = 0;
-    if (_selectedKeySize == '128') {
-      requiredLength = 16;
-    } else if (_selectedKeySize == '192') {
-      requiredLength = 24;
-    } else if (_selectedKeySize == '256') {
-      requiredLength = 32;
+    // Validate secret key length
+    if ((aesSecretKey.length != 16 && _selectedKeySize == '128') ||
+        (aesSecretKey.length != 24 && _selectedKeySize == '192') ||
+        (aesSecretKey.length != 32 && _selectedKeySize == '256')) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Invalid Key Length'),
+          content: Text('Secret key must be ${_selectedKeySize == '128' ? '16' : _selectedKeySize == '192' ? '24' : '32'} characters long for $_selectedKeySize bits.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
     }
 
-    return secretKey.length == requiredLength;
+    // Perform Caesar Cipher encryption
+    String caesarEncrypted = _caesarCipher(caesarPlaintext, caesarShift);
+    
+    // Perform Vigenère Cipher encryption
+    String vigenereEncrypted = _vigenereCipher(caesarEncrypted, vigenereKey);
+    
+    // Perform AES encryption
+    String aesEncrypted = _aesEncrypt(vigenereEncrypted, aesSecretKey, iv: aesIV);
+    
+    // Perform RSA encryption on the AES result
+    String rsaEncrypted = _rsaEncrypt(aesEncrypted);
+    
+    // Combine results
+    _finalOutput = 'Caesar: $caesarEncrypted\nVigenère: $vigenereEncrypted\nAES: $aesEncrypted\nRSA: $rsaEncrypted';
+    
+    // Display the final output
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Super Encryption Result', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(_finalOutput),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
-  // Main Widget
+Widget _buildTextField(TextEditingController controller, String label, {TextInputType keyboardType = TextInputType.text, bool obscureText = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(),
+        ),
+        keyboardType: keyboardType,
+        obscureText: obscureText,
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Super Encryption'),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Caesar Cipher Input
-            _buildCaesarCipherInput(),
-            SizedBox(height: 20),
-
-            // Vigenère Cipher Input
-            _buildVigenereCipherInput(),
-            SizedBox(height: 20),
-
-            // AES Input
-            _buildAesInput(),
-            SizedBox(height: 20),
-
-            // Final Encrypt Button for Super Encryption
-            ElevatedButton(
-              onPressed: () {
-                if (_validateKeySize(_aesSecretKeyController.text)) {
-                  setState(() {
-                    _superEncryptedData = _superEncrypt();
-                  });
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text(
-                          'Invalid Secret Key length for the selected key size')));
-                }
-              },
-              child: Text('Encrypt using Super Encryption'),
-            ),
-            SizedBox(height: 20),
-
-            // Output for Super Encrypted Data
-            SelectableText(
-              'Super Encrypted Data: $_superEncryptedData',
-              style: TextStyle(fontSize: 16, color: Colors.green),
-            ),
-            SizedBox(height: 20),
-
-            // Button for Decryption
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _decryptedData = _superDecrypt();
-                });
-              },
-              child: Text('Decrypt Super Encrypted Data'),
-            ),
-            SizedBox(height: 20),
-
-            // Output for Decrypted Data
-            SelectableText(
-              'Decrypted Data: $_decryptedData',
-              style: TextStyle(fontSize: 16, color: Colors.red),
-            ),
-          ],
+      appBar: AppBar(title: Text('Super Encryption')),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blue[300]!, Colors.green[300]!],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
-      ),
-    );
-  }
-
-  // Caesar Cipher Input Widget
-  Widget _buildCaesarCipherInput() {
-    return Card(
-      elevation: 4,
-      margin: EdgeInsets.all(10),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Caesar Cipher',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            TextField(
-              controller: _caesarPlaintextController,
-              decoration: InputDecoration(labelText: 'Enter Plaintext'),
-            ),
-            TextField(
-              controller: _caesarShiftController,
-              decoration: InputDecoration(labelText: 'Enter Shift Key'),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Vigenère Cipher Input Widget
-  Widget _buildVigenereCipherInput() {
-    return Card(
-      elevation: 4,
-      margin: EdgeInsets.all(10),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Vigenère Cipher',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            TextField(
-              controller: _vigenereKeyController,
-              decoration: InputDecoration(labelText: 'Enter Key (Alphabet)'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // AES Input Widget
-  Widget _buildAesInput() {
-    return Card(
-      elevation: 4,
-      margin: EdgeInsets.all(10),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('AES Encryption',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            DropdownButton<String>(
-              value: _selectedMode,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedMode = newValue!;
-                });
-              },
-              items: <String>['CBC', 'ECB']
-                  .map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-            ),
-            DropdownButton<String>(
-              value: _selectedKeySize,
-              onChanged: (String? newValue) {
-                setState(() {
-                  _selectedKeySize = newValue!;
-                });
-              },
-              items: <String>['128', '192', '256']
-                  .map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text('$value bits'),
-                );
-              }).toList(),
-            ),
-            TextField(
-              controller: _aesSecretKeyController,
-              decoration: InputDecoration(
-                labelText: 'Enter Secret Key',
-                hintText: 'Key length based on selected size (16/24/32 chars)',
-              ),
-              obscureText: true,
-              maxLength: _selectedKeySize == '128'
-                  ? 16
-                  : _selectedKeySize == '192'
-                      ? 24
-                      : 32, // Max length based on key size
-            ),
-            if (_selectedMode == 'CBC')
-              TextField(
-                controller: _aesIvController,
-                decoration: InputDecoration(
-                  labelText: 'Enter IV (16 characters)',
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildInputCard('Caesar Cipher Input', [
+                _buildTextField(_caesarPlaintextController, 'Plaintext'),
+                _buildTextField(_caesarShiftController, 'Shift Value', keyboardType: TextInputType.number),
+              ]),
+              _buildInputCard('Vigenère Cipher Input', [
+                _buildTextField(_vigenereKeyController, 'Key'),
+              ]),
+              _buildInputCard('AES Input', [
+                _buildDropdownKeySize(),
+                _buildDropdownMode(),
+                _buildTextFieldWithCount(_aesSecretKeyController, 'Secret Key', obscureText: false), // Changed obscureText to false
+                if (_selectedMode == 'CBC') _buildTextFieldWithCount(_aesIVController, 'IV', obscureText: true),
+              ]),
+              _buildRSAInputCard(), // Updated RSA card
+              ElevatedButton(
+                onPressed: _superEncrypt,
+                child: Text('Super Encrypt'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  textStyle: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                obscureText: true,
-                maxLength: 16,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Card builder for inputs
+  Widget _buildInputCard(String title, List<Widget> children) {
+    return Card(
+      margin: EdgeInsets.all(10),
+      child: Padding(
+        padding: EdgeInsets.all(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Card builder for AES input with character count
+Widget _buildTextFieldWithCount(TextEditingController controller, String label, {bool obscureText = false}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      TextField(
+        controller: controller,
+        decoration: InputDecoration(labelText: label),
+        obscureText: obscureText, // Set this to false when calling for AES secret key
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 5.0),
+        child: Text('${controller.text.length} characters', style: TextStyle(color: Colors.grey)),
+      ),
+    ],
+  );
+}
+  // Dropdown for AES key size selection
+  Widget _buildDropdownKeySize() {
+    return DropdownButton<String>(
+      value: _selectedKeySize,
+      items: <String>['128', '192', '256'].map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text('$value bits'),
+        );
+      }).toList(),
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedKeySize = newValue!;
+        });
+      },
+    );
+  }
+
+  // Dropdown for AES mode selection
+  Widget _buildDropdownMode() {
+    return DropdownButton<String>(
+      value: _selectedMode,
+      items: <String>['CBC', 'ECB'].map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedMode = newValue!;
+        });
+      },
+    );
+  }
+
+  // Build RSA card for key display
+  Widget _buildRSAInputCard() {
+    return Card(
+      margin: EdgeInsets.all(10),
+      child: Padding(
+        padding: EdgeInsets.all(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('RSA Key Generation', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ElevatedButton(
+              onPressed: _generateRSAKeys,
+              child: Text('Generate RSA Keys'),
+            ),
+            SizedBox(height: 10),
+            Text(_rsaKeyDisplay, style: TextStyle(fontSize: 14, color: Colors.grey)),
           ],
         ),
       ),
     );
   }
 }
+
